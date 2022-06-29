@@ -1,10 +1,12 @@
 const asyncHandler = require("express-async-handler");
 //Call models
 const Service = require("../models/serviceModels");
+const User = require("../models/userModel");
 
 //api/services, get
 const getServices = asyncHandler(async (req, res) => {
-  const services = await Service.find();
+  //only access if mataches user id
+  const services = await Service.find({ user: req.user.id });
   res.status(200).json(services);
 });
 
@@ -18,6 +20,7 @@ const setService = asyncHandler(async (req, res) => {
   }
   const service = await Service.create({
     text: req.body.text,
+    user: req.user.id,
   });
   res.status(200).json(service);
 });
@@ -30,6 +33,23 @@ const updateService = asyncHandler(async (req, res) => {
     res.status(400);
     throw new Error("Service not found");
   }
+  ////////////////////////////////
+  //find user mataches with req.user.id
+  const user = await User.findById(req.user.id);
+
+  //check for user
+  if (!user) {
+    res.status(401);
+    throw new Error("User not found");
+  }
+
+  //if logged in user does not matche the service user.
+  if (service.user.toString() !== user.id) {
+    res.status(401);
+    throw new Error("User not authorized");
+  }
+  ////////////////////////////////
+
   //updated service using findByIdAndUpdate
   const updatedService = await Service.findByIdAndUpdate(
     req.params.id,
@@ -48,6 +68,24 @@ const deleteService = asyncHandler(async (req, res) => {
     res.status(400);
     throw new Error("Service not found");
   }
+
+  ////////////////////////////////
+  //find user mataches with req.user.id
+  const user = await User.findById(req.user.id);
+
+  //check for user
+  if (!user) {
+    res.status(401);
+    throw new Error("User not found");
+  }
+
+  //if logged in user does not matche the service user.
+  if (service.user.toString() !== user.id) {
+    res.status(401);
+    throw new Error("User not authorized");
+  }
+  ////////////////////////////////
+
   await service.remove();
 
   res.status(200).json({ id: req.params.id });
